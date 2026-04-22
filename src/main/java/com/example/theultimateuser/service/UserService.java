@@ -7,7 +7,6 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -15,7 +14,7 @@ import java.util.List;
 
 @Service
 public class UserService {
-    private List<UserDto> mockUsers = new ArrayList<>();
+    private List<UserDto> userData = new ArrayList<>();
 
     @PostConstruct
     public void init() {
@@ -24,13 +23,13 @@ public class UserService {
 
 
     public List<UserDto> findUserByUserId(Long id) {
-        return mockUsers.stream()
+        return userData.stream()
                 .filter(user -> user.id().equals(id))
                 .toList();
     }
 
     public List<UserListDto> getUsersInDateRange(LocalDateTime start, LocalDateTime end) {
-        return mockUsers.stream()
+        return userData.stream()
                 .filter(u -> !u.createdBy().isBefore(start) && !u.createdBy().isAfter(end))
                 .map(u -> new UserListDto(u.firstName(), u.lastName(), u.profession()))
                 .toList();
@@ -38,7 +37,7 @@ public class UserService {
 
 
     public List<UserListDto> getUsersByProfession(String profession) {
-        return mockUsers.stream()
+        return userData.stream()
                 .filter(u -> u.profession().equalsIgnoreCase(profession))
                 .map(u -> new UserListDto(u.firstName(), u.lastName(), u.profession()))
                 .toList();
@@ -60,7 +59,7 @@ public class UserService {
                             values[3].trim(),
                             LocalDateTime.parse(values[4].trim().replace(" ", "T"))
                     );
-                    mockUsers.add(user);
+                    userData.add(user);
                 }
             }
 
