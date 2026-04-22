@@ -15,12 +15,6 @@ import java.util.List;
 
 @Service
 public class UserService {
-    //mock data from imported csv source
-//    private final List<UserDto> mockUsers = List.of(
-//            new UserDto(1L, "Lamia", "Masud", "developer", LocalDateTime.of(2026, 1,3,10,1)),
-//            new UserDto(2L, "Emily", "Johnson", "nurse",  LocalDateTime.of(2025, 1,3,10,1))
-//    );
-
     private List<UserDto> mockUsers = new ArrayList<>();
 
     @PostConstruct
