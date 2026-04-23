@@ -1,71 +1,99 @@
 package com.example.theultimateuser.service;
 
-import com.example.theultimateuser.dto.UserDto;
-import com.example.theultimateuser.dto.UserListDto;
+import com.example.theultimateuser.dto.UserDTO;
 import jakarta.annotation.PostConstruct;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
-
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 @Service
 public class UserService {
-    private List<UserDto> userData = new ArrayList<>();
+    private final List<UserDTO> magMutualUserData = new ArrayList<>();
 
     @PostConstruct
     public void init() {
-        loadDataFromCsv();
+        loadCsvData();
     }
 
-
-    public List<UserDto> findUserByUserId(Long id) {
-        return userData.stream()
+    public List<UserDTO> findUserInfoById(Long id) {
+        return magMutualUserData.stream()
                 .filter(user -> user.id().equals(id))
                 .toList();
     }
 
-    public List<UserListDto> getUsersInDateRange(LocalDateTime start, LocalDateTime end) {
-        return userData.stream()
-                .filter(u -> !u.createdBy().isBefore(start) && !u.createdBy().isAfter(end))
-                .map(u -> new UserListDto(u.firstName(), u.lastName(), u.profession()))
+    public List<UserDTO> findUserInfoInDateRange(String start, String end) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDate startDate = LocalDate.parse(start, formatter);
+        LocalDate endDate = LocalDate.parse(end, formatter);
+
+        return magMutualUserData.stream()
+                .filter(user -> {
+                    LocalDate userDate = user.dateCreated();
+                    return (userDate.isEqual(startDate) || userDate.isAfter(startDate)) &&
+                            (userDate.isEqual(endDate) || userDate.isBefore(endDate));
+                })
+                .sorted(Comparator.comparing(UserDTO::dateCreated))
                 .toList();
     }
 
-
-    public List<UserListDto> getUsersByProfession(String profession) {
-        return userData.stream()
-                .filter(u -> u.profession().equalsIgnoreCase(profession))
-                .map(u -> new UserListDto(u.firstName(), u.lastName(), u.profession()))
+    public List<UserDTO> fullTextSearch(Map<String, String> searchFilters) {
+        return magMutualUserData.stream()
+                .filter(user -> matchesAllChecks(user, searchFilters))
                 .toList();
     }
 
-    private void loadDataFromCsv() {
+    private void loadCsvData() {
         try {
-            ClassPathResource resource = new ClassPathResource("userdata.csv");
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(resource.getInputStream()))) {
+            ClassPathResource resource = new ClassPathResource("MagMutual User Information.csv");
+            try (BufferedReader input = new BufferedReader(new InputStreamReader(resource.getInputStream()))) {
+                input.readLine();
                 String line;
-                br.readLine();
-                while ((line = br.readLine()) != null) {
-                    String[] values = line.split(",");
+                while ((line = input.readLine()) != null) {
+                    String[] userInfo = line.split(",");
+                    DateTimeFormatter csvDateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                    UserDTO user = new UserDTO(
+                            Long.parseLong(userInfo[0].trim()),
+                            userInfo[1].trim().replace("\"", ""),
+                            userInfo[2].trim().replace("\"", ""),
+                            userInfo[3].trim().replace("\"", ""),
+                            userInfo[4].trim().replace("\"", ""),
+                            LocalDate.parse(userInfo[5].trim().replace("\"", ""), csvDateTimeFormatter),
+                            userInfo[6].trim().replace("\"", ""),
+                            userInfo[7].trim().replace("\"", "")
 
-                    UserDto user = new UserDto(
-                            Long.parseLong(values[0].trim()),
-                            values[1].trim(),
-                            values[2].trim(),
-                            values[3].trim(),
-                            LocalDateTime.parse(values[4].trim().replace(" ", "T"))
                     );
-                    userData.add(user);
+                    magMutualUserData.add(user);
                 }
             }
-
             } catch (Exception e) {
-                System.err.println("failed to load csv file" + e.getMessage());
+                System.err.println("Failed to load file" + e.getMessage());
             }
+        }
+
+        private boolean matchesAllChecks(UserDTO user, Map<String, String> searchFilters) {
+        return searchFilters.entrySet().stream()
+                .filter(entry -> entry.getValue() !=null
+                && !entry.getValue().isBlank())
+                .allMatch(entry -> matchesSearchField(user, entry.getKey(), entry.getValue()));
+        }
+
+        private boolean matchesSearchField(UserDTO user, String key, String value) {
+        String searchField = value.toLowerCase();
+            return switch (key.toLowerCase()) {
+                case "id" -> user.id().equals(Long.parseLong(value));
+                case "firstname" -> user.firstname().toLowerCase().contains(searchField);
+                case "lastname" -> user.lastname().toLowerCase().contains(searchField);
+                case "email" -> user.email().toLowerCase().contains(searchField);
+                case "profession" -> user.profession().toLowerCase().contains(searchField);
+                case "datecreated" -> user.dateCreated().equals(LocalDate.parse(value));
+                case "country" -> user.country().toLowerCase(Locale.ROOT).equals(searchField);
+                case "city" -> user.city(). toLowerCase(Locale.ROOT).equals(searchField);
+                default -> throw new IllegalStateException("Unexpected search value: " + key.toLowerCase());
+            };
         }
     }
 
