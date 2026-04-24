@@ -10,6 +10,11 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
+
+/**
+ * Service handles user search operations, including
+ * finding user info by certain criteria and full-text search.
+ */
 @Service
 public class UserService {
     private final List<UserDTO> magMutualUserData = new ArrayList<>();
