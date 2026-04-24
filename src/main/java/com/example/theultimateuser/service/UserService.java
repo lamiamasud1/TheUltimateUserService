@@ -29,10 +29,12 @@ public class UserService {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         LocalDate startDate = LocalDate.parse(start, formatter);
         LocalDate endDate = LocalDate.parse(end, formatter);
-
         return magMutualUserData.stream()
                 .filter(user -> {
                     LocalDate userDate = user.dateCreated();
+                    if(startDate.isAfter(endDate)) {
+                        throw new IllegalArgumentException("Start date should be before or equal to end date");
+                    }
                     return (userDate.isEqual(startDate) || userDate.isAfter(startDate)) &&
                             (userDate.isEqual(endDate) || userDate.isBefore(endDate));
                 })
@@ -64,7 +66,6 @@ public class UserService {
                             LocalDate.parse(userInfo[5].trim().replace("\"", ""), csvDateTimeFormatter),
                             userInfo[6].trim().replace("\"", ""),
                             userInfo[7].trim().replace("\"", "")
-
                     );
                     magMutualUserData.add(user);
                 }
@@ -90,8 +91,8 @@ public class UserService {
                 case "email" -> user.email().toLowerCase().contains(searchField);
                 case "profession" -> user.profession().toLowerCase().contains(searchField);
                 case "datecreated" -> user.dateCreated().equals(LocalDate.parse(value));
-                case "country" -> user.country().toLowerCase(Locale.ROOT).equals(searchField);
-                case "city" -> user.city(). toLowerCase(Locale.ROOT).equals(searchField);
+                case "country" -> user.country().toLowerCase(Locale.ROOT).contains(searchField);
+                case "city" -> user.city(). toLowerCase(Locale.ROOT).contains(searchField);
                 default -> throw new IllegalStateException("Unexpected search value: " + key.toLowerCase());
             };
         }
