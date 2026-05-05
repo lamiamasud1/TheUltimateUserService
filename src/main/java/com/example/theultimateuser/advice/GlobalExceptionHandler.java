@@ -42,7 +42,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ImmutableFieldUpdateException.class)
     public ResponseEntity<Map<String, Object>> handleImmutableFieldUpdateException(ImmutableFieldUpdateException e) {
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, e.getMessage());
+        return buildErrorResponse(HttpStatus.FORBIDDEN, e.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
