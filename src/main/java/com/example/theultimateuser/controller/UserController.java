@@ -1,4 +1,5 @@
 package com.example.theultimateuser.controller;
+
 import com.example.theultimateuser.dto.UserDTO;
 import com.example.theultimateuser.service.UserService;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +24,7 @@ public class UserController {
 
     @GetMapping("/{id}")
     public UserDTO getUserById(@PathVariable Long id) {
-       return userService.findUserInfoById(id);
+        return userService.findUserInfoById(id);
     }
 
     @GetMapping("/dateRange")
@@ -32,13 +33,13 @@ public class UserController {
     }
 
     @GetMapping("/searchByField")
-    public List<UserDTO> getStudentsByField(@RequestParam Map<String,String> userSearchParams)  {
+    public List<UserDTO> getStudentsByField(@RequestParam Map<String, String> userSearchParams) {
         return userService.fullTextSearch(userSearchParams);
     }
 
     @PatchMapping("/{id}")
     public UserDTO updateUserInfo(@PathVariable Long id, @RequestBody Map<String, String> fieldsToUpdate) {
-       return  userService.updateMultipleUserSearchFields(id, fieldsToUpdate);
+        return userService.updateMultipleUserSearchFields(id, fieldsToUpdate);
     }
 
 }

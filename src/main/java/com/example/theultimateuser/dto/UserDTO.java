@@ -1,7 +1,6 @@
 package com.example.theultimateuser.dto;
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-
 import java.time.LocalDate;
 
 /**
@@ -18,4 +17,5 @@ public record UserDTO(
         LocalDate dateCreated,
         String country,
         String city
-) {}
+) {
+}

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,7 +68,7 @@ public class UserServiceTest {
     void shouldThrowError_WhenDateRangeIsInvalid() {
         LocalDate start = LocalDate.of(2025, 12, 1);
         LocalDate end = LocalDate.of(2024, 10, 27);
-        assertThrows(InvalidSearchCriteriaException.class, () -> userService.findUserInfoInDateRange(start,end));
+        assertThrows(InvalidSearchCriteriaException.class, () -> userService.findUserInfoInDateRange(start, end));
     }
 
     @Test
@@ -75,7 +76,7 @@ public class UserServiceTest {
         UserDTO nurseUser = new UserDTO(111L, "Sally", "Larson", "sallylarson@gmail.com", "nurse",
                 LocalDate.of(2025, 10, 26), "USA", "Tampa");
         when(csvUserRepository.readAllUsers()).thenReturn(List.of(sampleUser, nurseUser));
-        Map<String, String> searchCriteria =Map.of("profession", "software engineer");
+        Map<String, String> searchCriteria = Map.of("profession", "software engineer");
         List<UserDTO> results = userService.fullTextSearch(searchCriteria);
         assertEquals(1, results.size(), "1 software engineer found");
         assertEquals("Software Engineer", results.get(0).profession());
@@ -86,7 +87,7 @@ public class UserServiceTest {
 
     @Test
     void shouldThrowError_WithInvalidSearchCriteria() {
-        Map<String, String> invalidSearchCriteria =Map.of("address", "1234 Westchase Road");
+        Map<String, String> invalidSearchCriteria = Map.of("address", "1234 Westchase Road");
         assertThrows(InvalidSearchCriteriaException.class, () -> userService.fullTextSearch(invalidSearchCriteria));
     }
 
@@ -94,11 +95,11 @@ public class UserServiceTest {
     @Test
     void shouldUpdateUserInfo_WithValidFields() {
         Long userId = 110L;
-       when(csvUserRepository.readAllUsers()).thenReturn(new ArrayList<>(List.of(sampleUser)));
-       Map<String, String> updates = Map.of("profession", "product manager");
-       UserDTO results = userService.updateMultipleUserSearchFields(userId, updates);
-       assertEquals("product manager", results.profession());
-       assertEquals("Lamia", results.firstname());
+        when(csvUserRepository.readAllUsers()).thenReturn(new ArrayList<>(List.of(sampleUser)));
+        Map<String, String> updates = Map.of("profession", "product manager");
+        UserDTO results = userService.updateMultipleUserSearchFields(userId, updates);
+        assertEquals("product manager", results.profession());
+        assertEquals("Lamia", results.firstname());
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.example.theultimateuser.service;
 import com.example.theultimateuser.dto.UserDTO;
 import com.example.theultimateuser.repository.CsvUserRepository;
 import org.springframework.stereotype.Service;
+
 import java.time.LocalDate;
 import java.util.*;
 
@@ -28,13 +29,13 @@ public class UserService {
     }
 
     public List<UserDTO> findUserInfoInDateRange(LocalDate start, LocalDate end) {
-            if (start.isAfter(end)) {
-                throw new InvalidSearchCriteriaException("The start date (" + start + ") should be before or equal to the end date (" + end + ")");
-            }
-            return csvUserRepository.readAllUsers().stream()
-                    .filter(user -> !user.dateCreated().isBefore(start) && !user.dateCreated().isAfter(end))
-                    .sorted(Comparator.comparing(UserDTO::dateCreated))
-                    .toList();
+        if (start.isAfter(end)) {
+            throw new InvalidSearchCriteriaException("The start date (" + start + ") should be before or equal to the end date (" + end + ")");
+        }
+        return csvUserRepository.readAllUsers().stream()
+                .filter(user -> !user.dateCreated().isBefore(start) && !user.dateCreated().isAfter(end))
+                .sorted(Comparator.comparing(UserDTO::dateCreated))
+                .toList();
     }
 
     public List<UserDTO> fullTextSearch(Map<String, String> searchFilters) {
@@ -58,63 +59,64 @@ public class UserService {
             }
         });
 
-        if(sanitizedFields.containsKey("id")){
+        if (sanitizedFields.containsKey("id")) {
             throw new ImmutableFieldUpdateException("ID cannot be modified.");
         } else if (sanitizedFields.containsKey("datecreated")) {
             throw new ImmutableFieldUpdateException("Date cannot be modified.");
         }
-         UserDTO existingUserInfo = findUserInfoById(id);
-         UserDTO updatedUserRecord = new UserDTO(
-         existingUserInfo.id(),
-         fieldsToUpdate.getOrDefault("firstname", existingUserInfo.firstname()),
-         fieldsToUpdate.getOrDefault("lastname", existingUserInfo.lastname()),
-         fieldsToUpdate.getOrDefault("email", existingUserInfo.email()),
-         fieldsToUpdate.getOrDefault("profession", existingUserInfo.profession()),
-         existingUserInfo.dateCreated(),
-         fieldsToUpdate.getOrDefault("country", existingUserInfo.country()),
-         fieldsToUpdate.getOrDefault("city", existingUserInfo.city())
-         );
-         applyUpdateToModifiedCsv(id, updatedUserRecord);
-         return updatedUserRecord;
+        UserDTO existingUserInfo = findUserInfoById(id);
+        UserDTO updatedUserRecord = new UserDTO(
+                existingUserInfo.id(),
+                fieldsToUpdate.getOrDefault("firstname", existingUserInfo.firstname()),
+                fieldsToUpdate.getOrDefault("lastname", existingUserInfo.lastname()),
+                fieldsToUpdate.getOrDefault("email", existingUserInfo.email()),
+                fieldsToUpdate.getOrDefault("profession", existingUserInfo.profession()),
+                existingUserInfo.dateCreated(),
+                fieldsToUpdate.getOrDefault("country", existingUserInfo.country()),
+                fieldsToUpdate.getOrDefault("city", existingUserInfo.city())
+        );
+        applyUpdateToModifiedCsv(id, updatedUserRecord);
+        return updatedUserRecord;
     }
 
     private void searchFilterValidation(Map<String, String> searchFilters) {
-         List<String> allowedKeys = List.of("id", "datecreated", "firstname", "lastname", "email", "profession", "country", "city");
-         for(String key:searchFilters.keySet()) {
-             if(!allowedKeys.contains(key)) {
-                 throw new InvalidSearchCriteriaException("Unkown search filter: " + key);
-             }
-         }
+        List<String> allowedKeys = List.of("id", "datecreated", "firstname", "lastname", "email", "profession", "country", "city");
+        for (String key : searchFilters.keySet()) {
+            if (!allowedKeys.contains(key)) {
+                throw new InvalidSearchCriteriaException("Unkown search filter: " + key);
+            }
         }
+    }
 
     private boolean matchesAllChecks(UserDTO user, Map<String, String> searchFilters) {
-            return searchFilters.entrySet().stream()
-                    .allMatch(entry -> matchesSearchField(user, entry.getKey(), entry.getValue()));
-        }
+        return searchFilters.entrySet().stream()
+                .allMatch(entry -> matchesSearchField(user, entry.getKey(), entry.getValue()));
+    }
+
     private boolean matchesSearchField(UserDTO user, String key, String value) {
         String searchField = value.toLowerCase();
-            return switch (key) {
-                case "id" -> user.id().toString().equals(value);
-                case "firstname" -> user.firstname().toLowerCase().contains(searchField);
-                case "lastname" -> user.lastname().toLowerCase().contains(searchField);
-                case "email" -> user.email().toLowerCase().contains(searchField);
-                case "profession" -> user.profession().toLowerCase().contains(searchField);
-                case "datecreated" -> user.dateCreated().toString().equals(value);
-                case "country" -> user.country().toLowerCase(Locale.ROOT).contains(searchField);
-                case "city" -> user.city().toLowerCase(Locale.ROOT).contains(searchField);
-                default -> true;
-            };
+        return switch (key) {
+            case "id" -> user.id().toString().equals(value);
+            case "firstname" -> user.firstname().toLowerCase().contains(searchField);
+            case "lastname" -> user.lastname().toLowerCase().contains(searchField);
+            case "email" -> user.email().toLowerCase().contains(searchField);
+            case "profession" -> user.profession().toLowerCase().contains(searchField);
+            case "datecreated" -> user.dateCreated().toString().equals(value);
+            case "country" -> user.country().toLowerCase(Locale.ROOT).contains(searchField);
+            case "city" -> user.city().toLowerCase(Locale.ROOT).contains(searchField);
+            default -> true;
+        };
     }
 
     private void applyUpdateToModifiedCsv(Long id, UserDTO updatedUserInfo) {
         List<UserDTO> users = new ArrayList<>(csvUserRepository.readAllUsers());
         boolean userRemoved = users.removeIf(user -> user.id().equals(id));
-        if(!userRemoved) {
+        if (!userRemoved) {
             throw new UserNotFoundException(id);
         }
-            users.add(updatedUserInfo);
-            csvUserRepository.saveAllUsers(users);
-        }
-
+        users.add(updatedUserInfo);
+        csvUserRepository.saveAllUsers(users);
     }
+
+}
 
