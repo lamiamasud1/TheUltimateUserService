@@ -1,8 +1,9 @@
 package com.example.theultimateuser.controller;
 import com.example.theultimateuser.dto.UserDTO;
 import com.example.theultimateuser.service.UserService;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -21,24 +22,23 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity <List<UserDTO>> getUserById(@PathVariable Long id) {
-        List<UserDTO> userById = userService.findUserInfoById(id);
-        if(userById.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(userById);
+    public UserDTO getUserById(@PathVariable Long id) {
+       return userService.findUserInfoById(id);
     }
 
-    @GetMapping("/userList")
-    public ResponseEntity<List<UserDTO>> getUserInfoByDateRange(@RequestParam String startDate, String endDate) {
-        List<UserDTO> userResultsByDate =  userService.findUserInfoInDateRange(startDate, endDate);
-        return ResponseEntity.ok(userResultsByDate);
+    @GetMapping("/dateRange")
+    public List<UserDTO> getUserInfoByDateRange(@RequestParam LocalDate startDate, LocalDate endDate) {
+        return userService.findUserInfoInDateRange(startDate, endDate);
     }
 
     @GetMapping("/searchByField")
-    public ResponseEntity<List<UserDTO>> getStudentsByField(@RequestParam Map<String,String> userSearchParams) {
-        List<UserDTO> searchResults = userService.fullTextSearch(userSearchParams);
-        return ResponseEntity.ok(searchResults);
+    public List<UserDTO> getStudentsByField(@RequestParam Map<String,String> userSearchParams)  {
+        return userService.fullTextSearch(userSearchParams);
+    }
+
+    @PatchMapping("/{id}")
+    public UserDTO updateUserInfo(@PathVariable Long id, @RequestBody Map<String, String> fieldsToUpdate) {
+       return  userService.updateMultipleUserSearchFields(id, fieldsToUpdate);
     }
 
 }

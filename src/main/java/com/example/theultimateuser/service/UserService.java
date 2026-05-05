@@ -1,13 +1,9 @@
 package com.example.theultimateuser.service;
 
 import com.example.theultimateuser.dto.UserDTO;
-import jakarta.annotation.PostConstruct;
-import org.springframework.core.io.ClassPathResource;
+import com.example.theultimateuser.repository.CsvUserRepository;
 import org.springframework.stereotype.Service;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 
@@ -17,89 +13,108 @@ import java.util.*;
  */
 @Service
 public class UserService {
-    private final List<UserDTO> magMutualUserData = new ArrayList<>();
 
-    @PostConstruct
-    public void init() {
-        loadCsvData();
+    private final CsvUserRepository csvUserRepository;
+
+    public UserService(CsvUserRepository csvUserRepository) {
+        this.csvUserRepository = csvUserRepository;
     }
 
-    public List<UserDTO> findUserInfoById(Long id) {
-        return magMutualUserData.stream()
+    public UserDTO findUserInfoById(Long id) {
+        return csvUserRepository.readAllUsers().stream()
                 .filter(user -> user.id().equals(id))
-                .toList();
+                .findFirst()
+                .orElseThrow(() -> new UserNotFoundException(id));
     }
 
-    public List<UserDTO> findUserInfoInDateRange(String start, String end) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        LocalDate startDate = LocalDate.parse(start, formatter);
-        LocalDate endDate = LocalDate.parse(end, formatter);
-        return magMutualUserData.stream()
-                .filter(user -> {
-                    LocalDate userDate = user.dateCreated();
-                    if(startDate.isAfter(endDate)) {
-                        throw new IllegalArgumentException("Start date should be before or equal to end date");
-                    }
-                    return (userDate.isEqual(startDate) || userDate.isAfter(startDate)) &&
-                            (userDate.isEqual(endDate) || userDate.isBefore(endDate));
-                })
-                .sorted(Comparator.comparing(UserDTO::dateCreated))
-                .toList();
+    public List<UserDTO> findUserInfoInDateRange(LocalDate start, LocalDate end) {
+            if (start.isAfter(end)) {
+                throw new InvalidSearchCriteriaException("The start date (" + start + ") should be before or equal to the end date (" + end + ")");
+            }
+            return csvUserRepository.readAllUsers().stream()
+                    .filter(user -> !user.dateCreated().isBefore(start) && !user.dateCreated().isAfter(end))
+                    .sorted(Comparator.comparing(UserDTO::dateCreated))
+                    .toList();
     }
 
     public List<UserDTO> fullTextSearch(Map<String, String> searchFilters) {
-        return magMutualUserData.stream()
-                .filter(user -> matchesAllChecks(user, searchFilters))
+        Map<String, String> sanitizedFilters = new HashMap<>();
+        searchFilters.forEach((key, value) -> {
+            if (value != null && !value.isBlank()) {
+                sanitizedFilters.put(key.toLowerCase(), value.trim());
+            }
+        });
+        searchFilterValidation(sanitizedFilters);
+        return csvUserRepository.readAllUsers().stream()
+                .filter(user -> matchesAllChecks(user, sanitizedFilters))
                 .toList();
     }
 
-    private void loadCsvData() {
-        try {
-            ClassPathResource resource = new ClassPathResource("MagMutual User Information.csv");
-            try (BufferedReader input = new BufferedReader(new InputStreamReader(resource.getInputStream()))) {
-                input.readLine();
-                String line;
-                while ((line = input.readLine()) != null) {
-                    String[] userInfo = line.split(",");
-                    DateTimeFormatter csvDateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-                    UserDTO user = new UserDTO(
-                            Long.parseLong(userInfo[0].trim()),
-                            userInfo[1].trim().replace("\"", ""),
-                            userInfo[2].trim().replace("\"", ""),
-                            userInfo[3].trim().replace("\"", ""),
-                            userInfo[4].trim().replace("\"", ""),
-                            LocalDate.parse(userInfo[5].trim().replace("\"", ""), csvDateTimeFormatter),
-                            userInfo[6].trim().replace("\"", ""),
-                            userInfo[7].trim().replace("\"", "")
-                    );
-                    magMutualUserData.add(user);
-                }
+    public UserDTO updateMultipleUserSearchFields(Long id, Map<String, String> fieldsToUpdate) {
+        Map<String, String> sanitizedFields = new HashMap<>();
+        fieldsToUpdate.forEach((key, value) -> {
+            if (value != null && !value.isBlank()) {
+                sanitizedFields.put(key.toLowerCase(), value.trim());
             }
-            } catch (Exception e) {
-                System.err.println("Failed to load file" + e.getMessage());
-            }
+        });
+
+        if(sanitizedFields.containsKey("id")){
+            throw new ImmutableFieldUpdateException("ID cannot be modified.");
+        } else if (sanitizedFields.containsKey("datecreated")) {
+            throw new ImmutableFieldUpdateException("Date cannot be modified.");
+        }
+         UserDTO existingUserInfo = findUserInfoById(id);
+         UserDTO updatedUserRecord = new UserDTO(
+         existingUserInfo.id(),
+         fieldsToUpdate.getOrDefault("firstname", existingUserInfo.firstname()),
+         fieldsToUpdate.getOrDefault("lastname", existingUserInfo.lastname()),
+         fieldsToUpdate.getOrDefault("email", existingUserInfo.email()),
+         fieldsToUpdate.getOrDefault("profession", existingUserInfo.profession()),
+         existingUserInfo.dateCreated(),
+         fieldsToUpdate.getOrDefault("country", existingUserInfo.country()),
+         fieldsToUpdate.getOrDefault("city", existingUserInfo.city())
+         );
+         applyUpdateToModifiedCsv(id, updatedUserRecord);
+         return updatedUserRecord;
+    }
+
+    private void searchFilterValidation(Map<String, String> searchFilters) {
+         List<String> allowedKeys = List.of("id", "datecreated", "firstname", "lastname", "email", "profession", "country", "city");
+         for(String key:searchFilters.keySet()) {
+             if(!allowedKeys.contains(key)) {
+                 throw new InvalidSearchCriteriaException("Unkown search filter: " + key);
+             }
+         }
         }
 
-        private boolean matchesAllChecks(UserDTO user, Map<String, String> searchFilters) {
-        return searchFilters.entrySet().stream()
-                .filter(entry -> entry.getValue() !=null
-                && !entry.getValue().isBlank())
-                .allMatch(entry -> matchesSearchField(user, entry.getKey(), entry.getValue()));
+    private boolean matchesAllChecks(UserDTO user, Map<String, String> searchFilters) {
+            return searchFilters.entrySet().stream()
+                    .allMatch(entry -> matchesSearchField(user, entry.getKey(), entry.getValue()));
         }
-
-        private boolean matchesSearchField(UserDTO user, String key, String value) {
+    private boolean matchesSearchField(UserDTO user, String key, String value) {
         String searchField = value.toLowerCase();
-            return switch (key.toLowerCase()) {
-                case "id" -> user.id().equals(Long.parseLong(value));
+            return switch (key) {
+                case "id" -> user.id().toString().equals(value);
                 case "firstname" -> user.firstname().toLowerCase().contains(searchField);
                 case "lastname" -> user.lastname().toLowerCase().contains(searchField);
                 case "email" -> user.email().toLowerCase().contains(searchField);
                 case "profession" -> user.profession().toLowerCase().contains(searchField);
-                case "datecreated" -> user.dateCreated().equals(LocalDate.parse(value));
+                case "datecreated" -> user.dateCreated().toString().equals(value);
                 case "country" -> user.country().toLowerCase(Locale.ROOT).contains(searchField);
-                case "city" -> user.city(). toLowerCase(Locale.ROOT).contains(searchField);
-                default -> throw new IllegalStateException("Unexpected search value: " + key.toLowerCase());
+                case "city" -> user.city().toLowerCase(Locale.ROOT).contains(searchField);
+                default -> true;
             };
+    }
+
+    private void applyUpdateToModifiedCsv(Long id, UserDTO updatedUserInfo) {
+        List<UserDTO> users = new ArrayList<>(csvUserRepository.readAllUsers());
+        boolean userRemoved = users.removeIf(user -> user.id().equals(id));
+        if(!userRemoved) {
+            throw new UserNotFoundException(id);
         }
+            users.add(updatedUserInfo);
+            csvUserRepository.saveAllUsers(users);
+        }
+
     }
 
