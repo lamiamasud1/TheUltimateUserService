@@ -83,7 +83,7 @@ public class UserService {
         List<String> allowedKeys = List.of("id", "datecreated", "firstname", "lastname", "email", "profession", "country", "city");
         for (String key : searchFilters.keySet()) {
             if (!allowedKeys.contains(key)) {
-                throw new InvalidSearchCriteriaException("Unkown search filter: " + key);
+                throw new InvalidSearchCriteriaException("Unknown search filter: " + key);
             }
         }
     }

@@ -37,7 +37,7 @@ public class UserController {
         return userService.fullTextSearch(userSearchParams);
     }
 
-    @PatchMapping("/{id}")
+    @PatchMapping("/{id}/updateField")
     public UserDTO updateUserInfo(@PathVariable Long id, @RequestBody Map<String, String> fieldsToUpdate) {
         return userService.updateMultipleUserSearchFields(id, fieldsToUpdate);
     }
